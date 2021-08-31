@@ -35,6 +35,48 @@ def run(req, host, port, scheme, barrier):
     
     return 0
 
+def single_file(nbThread, fReq, port, url):
+    if not isfile(fReq):
+        print("[-] - request file does not exist.")
+        quit()
+
+    threads = []
+
+    req = open(fReq, "rb").read()
+
+    barrier = Barrier(nbThread)
+    for _ in range(nbThread):
+        t = Thread(target=run, args=(req,url.hostname, port, url.scheme, barrier,))
+        t.start()
+        threads.append(t)
+
+    for t in threads:
+        t.join()
+
+    return 0
+
+def multi_file(nbThread, fReq, port, url):
+
+    for f in fReq:
+        if not isfile(f):
+            print("[-] - request file : %d does not exist." % f)
+            quit()
+
+    threads = []
+    nbThread = len(fReq)
+    
+    barrier = Barrier(nbThread)
+    for f in fReq:
+        req = open(f, "rb").read()
+        t = Thread(target=run, args=(req,url.hostname, port, url.scheme, barrier,))
+        t.start()
+        threads.append(t)
+
+    for t in threads:
+        t.join()
+
+    return 0
+
 def main():
 
     desc = '''Just a simple tool to test race condition on engagement.
@@ -69,24 +111,14 @@ def main():
     else:
         port = url.port
 
-    if not isfile(fReq):
-        print("[-] - request file does not exist.")
-        quit()
+    # check if fReq contains multiple request file :
 
-    threads = []
 
-    req = open(fReq, "rb").read()
-
-    barrier = Barrier(nbThread)
-    for _ in range(nbThread):
-        t = Thread(target=run, args=(req,url.hostname, port, url.scheme, barrier,))
-        t.start()
-        threads.append(t)
-
-    for t in threads:
-        t.join()
-
-    return 0
+    if "," in fReq:
+        fReq = fReq.split(',')
+        multi_file(nbThread, fReq, port, url)
+    else:
+        single_file(nbThread, fReq, port, url)
     
 if __name__ == '__main__':
     main()
